@@ -137,23 +137,32 @@ export const FamilyTreeCanvas: React.FC = () => {
     redraw();
   };
 
-  // Find node at world coordinate
+  // Find node at world coordinate (with touch tolerance padding)
   const findNodeAt = (worldX: number, worldY: number): string | null => {
     const nodeW = CANVAS_CONSTANTS.NODE_WIDTH;
     const nodeH = CANVAS_CONSTANTS.NODE_HEIGHT;
+    const hitPadding = 15; // Touch-friendly margin
 
     for (const p of allPersons.values()) {
       if (
-        worldX >= p.canvasX &&
-        worldX <= p.canvasX + nodeW &&
-        worldY >= p.canvasY &&
-        worldY <= p.canvasY + nodeH
+        worldX >= p.canvasX - hitPadding &&
+        worldX <= p.canvasX + nodeW + hitPadding &&
+        worldY >= p.canvasY - hitPadding &&
+        worldY <= p.canvasY + nodeH + hitPadding
       ) {
         return p.id;
       }
     }
     return null;
   };
+
+  // Touch Interaction State
+  const touchInfoRef = useRef<{
+    mode: 'NONE' | 'ONE' | 'PINCH';
+    initialDistance?: number;
+    initialZoom?: number;
+    pinchCenter?: { x: number; y: number };
+  }>({ mode: 'NONE' });
 
   // Mouse Down
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -283,6 +292,131 @@ export const FamilyTreeCanvas: React.FC = () => {
     redraw();
   };
 
+  // Touch Event Handlers (Mobile Navigation, Node Dragging & Pinch-to-Zoom)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const screenX = touch.clientX - rect.left;
+      const screenY = touch.clientY - rect.top;
+      const worldPoint = viewportRef.current.screenToWorld(screenX, screenY);
+
+      const hitNodeId = findNodeAt(worldPoint.x, worldPoint.y);
+
+      if (hitNodeId) {
+        const p = allPersons.get(hitNodeId)!;
+        setDragState({
+          type: 'NODE',
+          nodeId: hitNodeId,
+          startScreenX: screenX,
+          startScreenY: screenY,
+          startNodeWorldX: p.canvasX,
+          startNodeWorldY: p.canvasY,
+          hasMoved: false,
+        });
+      } else {
+        setDragState({
+          type: 'PAN',
+          startScreenX: screenX,
+          startScreenY: screenY,
+          hasMoved: false,
+        });
+      }
+      touchInfoRef.current = { mode: 'ONE' };
+    } else if (e.touches.length === 2) {
+      // Pinch to Zoom init
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      const centerX = (t1.clientX + t2.clientX) / 2 - rect.left;
+      const centerY = (t1.clientY + t2.clientY) / 2 - rect.top;
+
+      touchInfoRef.current = {
+        mode: 'PINCH',
+        initialDistance: dist,
+        initialZoom: viewportRef.current.zoom,
+        pinchCenter: { x: centerX, y: centerY },
+      };
+      setDragState({ type: 'NONE', startScreenX: 0, startScreenY: 0 });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (e.touches.length === 1 && touchInfoRef.current.mode === 'ONE') {
+      const touch = e.touches[0];
+      const screenX = touch.clientX - rect.left;
+      const screenY = touch.clientY - rect.top;
+
+      const deltaScreenX = screenX - dragState.startScreenX;
+      const deltaScreenY = screenY - dragState.startScreenY;
+      const moveDist = Math.hypot(deltaScreenX, deltaScreenY);
+
+      if (dragState.type === 'PAN') {
+        viewportRef.current.panBy(deltaScreenX, deltaScreenY);
+        setDragState({
+          ...dragState,
+          startScreenX: screenX,
+          startScreenY: screenY,
+          hasMoved: dragState.hasMoved || moveDist > 5,
+        });
+        setViewportTick((t) => t + 1);
+        redraw();
+      } else if (dragState.type === 'NODE' && dragState.nodeId) {
+        const deltaWorldX = deltaScreenX / viewportRef.current.zoom;
+        const deltaWorldY = deltaScreenY / viewportRef.current.zoom;
+
+        let newWorldX = (dragState.startNodeWorldX ?? 0) + deltaWorldX;
+        let newWorldY = (dragState.startNodeWorldY ?? 0) + deltaWorldY;
+
+        newWorldX = CanvasViewport.snapToGrid(newWorldX, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
+        newWorldY = CanvasViewport.snapToGrid(newWorldY, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
+
+        updatePersonPosition(dragState.nodeId, newWorldX, newWorldY);
+        setDragState({
+          ...dragState,
+          hasMoved: dragState.hasMoved || moveDist > 5,
+        });
+        redraw();
+      }
+    } else if (e.touches.length === 2 && touchInfoRef.current.mode === 'PINCH') {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+
+      const initDist = touchInfoRef.current.initialDistance || dist;
+      const initZoom = touchInfoRef.current.initialZoom || viewportRef.current.zoom;
+      const center = touchInfoRef.current.pinchCenter || { x: rect.width / 2, y: rect.height / 2 };
+
+      if (initDist > 0) {
+        const factor = dist / initDist;
+        viewportRef.current.setZoom(initZoom * factor, center.x, center.y);
+        setViewportTick((t) => t + 1);
+        redraw();
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchInfoRef.current.mode === 'ONE') {
+      if (dragState.type === 'NODE' && !dragState.hasMoved && dragState.nodeId) {
+        selectPerson(dragState.nodeId);
+      } else if (dragState.type === 'PAN' && !dragState.hasMoved) {
+        selectPerson(null);
+      }
+    }
+
+    touchInfoRef.current = { mode: 'NONE' };
+    setDragState({ type: 'NONE', startScreenX: 0, startScreenY: 0 });
+    setActiveGuidelinesLocal({});
+    setGuidelines({});
+    redraw();
+  };
+
   return (
     <div ref={containerRef} className="relative w-full h-full select-none overflow-hidden bg-slate-950">
       <CanvasToolbar
@@ -329,7 +463,12 @@ export const FamilyTreeCanvas: React.FC = () => {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className={`w-full h-full block ${
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        style={{ touchAction: 'none' }}
+        className={`w-full h-full block touch-none ${
           dragState.type === 'PAN' ? 'cursor-grab' : dragState.type === 'NODE' ? 'cursor-grabbing' : 'cursor-default'
         }`}
       />

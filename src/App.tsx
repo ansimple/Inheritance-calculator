@@ -89,31 +89,28 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-brown-950 text-stone-100 overflow-hidden font-sans">
       {/* Top Navigation Bar */}
-      <header className="h-14 border-b border-slate-800 bg-slate-900/90 backdrop-blur px-4 flex items-center justify-between z-20 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 font-bold text-sm">
-            상
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold tracking-tight text-slate-100 flex items-center gap-2">
-              대한민국 상속 분배 및 유류분 계산기
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-mono">
-                2000~2026 전면 개정
-              </span>
-            </h1>
-          </div>
+      <header className="h-14 border-b border-brown-800 bg-brown-900/95 backdrop-blur px-3 sm:px-4 flex items-center justify-between z-20 shrink-0">
+        {/* Logo and Brand (Without '상' icon) */}
+        <div className="flex items-center min-w-0">
+          <h1 className="text-xs sm:text-sm font-semibold tracking-tight text-stone-100 flex items-center gap-2 truncate">
+            <span className="font-bold tracking-normal text-amber-400 truncate">상속 계산기</span>
+            <span className="hidden sm:inline text-stone-300 font-normal">대한민국 상속 분배 및 유류분</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 font-mono font-medium shrink-0">
+              2026 전면 개정
+            </span>
+          </h1>
         </div>
 
-        {/* View Switching Tabs */}
-        <div className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+        {/* View Switching Tabs (Desktop: hidden on mobile) */}
+        <div className="hidden md:flex items-center bg-brown-950/90 p-1 rounded-xl border border-brown-800">
           <button
             onClick={() => setActiveTab('wizard')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeTab === 'wizard'
-                ? 'bg-sky-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-stone-400 hover:text-stone-200 hover:bg-brown-900'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -123,8 +120,8 @@ export default function App() {
             onClick={() => setActiveTab('canvas')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeTab === 'canvas'
-                ? 'bg-sky-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-stone-400 hover:text-stone-200 hover:bg-brown-900'
             }`}
           >
             <GitFork className="w-3.5 h-3.5" />
@@ -134,8 +131,8 @@ export default function App() {
             onClick={() => setActiveTab('visualizer')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeTab === 'visualizer'
-                ? 'bg-sky-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-stone-400 hover:text-stone-200 hover:bg-brown-900'
             }`}
           >
             <Calculator className="w-3.5 h-3.5" />
@@ -144,16 +141,16 @@ export default function App() {
         </div>
 
         {/* Actions (Undo/Redo & Export) */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center border-r border-slate-800 pr-2 mr-1 gap-1">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center border-r border-brown-800 pr-1.5 sm:pr-2 mr-0.5 sm:mr-1 gap-0.5 sm:gap-1">
             <button 
               onClick={undo}
               disabled={!canUndo}
               title="실행 취소 (Ctrl+Z)"
               className={`p-1.5 rounded-lg transition ${
                 canUndo 
-                  ? 'text-slate-300 hover:text-white hover:bg-slate-800' 
-                  : 'text-slate-600 cursor-not-allowed'
+                  ? 'text-stone-300 hover:text-white hover:bg-brown-850' 
+                  : 'text-stone-600 cursor-not-allowed'
               }`}
             >
               <RotateCcw className="w-4 h-4" />
@@ -164,8 +161,8 @@ export default function App() {
               title="다시 실행 (Ctrl+Y)"
               className={`p-1.5 rounded-lg transition ${
                 canRedo 
-                  ? 'text-slate-300 hover:text-white hover:bg-slate-800' 
-                  : 'text-slate-600 cursor-not-allowed'
+                  ? 'text-stone-300 hover:text-white hover:bg-brown-850' 
+                  : 'text-stone-600 cursor-not-allowed'
               }`}
             >
               <RotateCw className="w-4 h-4" />
@@ -174,40 +171,89 @@ export default function App() {
 
           <button 
             onClick={handleExportExcel}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            title="엑셀 다운로드 (.xlsx)"
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               isExported
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                : 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                : 'bg-emerald-950/60 text-emerald-300 border border-emerald-700/50 hover:bg-emerald-900/60'
             }`}
           >
             {isExported ? (
               <>
                 <CheckCircle className="w-3.5 h-3.5 pointer-events-none" />
-                다운로드 완료!
+                <span className="hidden sm:inline">다운로드 완료!</span>
               </>
             ) : (
               <>
                 <FileSpreadsheet className="w-3.5 h-3.5 pointer-events-none" />
-                엑셀 다운로드
+                <span className="hidden sm:inline">엑셀</span>
+                <span className="hidden md:inline">다운로드</span>
               </>
             )}
           </button>
           <button 
             onClick={() => setIsPrintModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 text-xs font-medium transition"
+            title="보고서 인쇄 및 PDF 저장"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-brown-850 text-stone-200 hover:bg-brown-800 border border-brown-700/60 text-xs font-medium transition"
           >
             <Printer className="w-3.5 h-3.5 pointer-events-none" />
-            인쇄 / PDF
+            <span className="hidden sm:inline">인쇄</span>
+            <span className="hidden md:inline">/ PDF</span>
           </button>
         </div>
       </header>
 
       {/* Main Workspace Body */}
-      <main className="flex-1 relative overflow-hidden bg-slate-950">
+      <main className="flex-1 relative overflow-hidden bg-brown-950 pb-16 md:pb-0">
         {activeTab === 'wizard' && <WizardContainer />}
         {activeTab === 'canvas' && <FamilyTreeCanvas />}
         {activeTab === 'visualizer' && <PipelineFlowGraph />}
       </main>
+
+      {/* Mobile Bottom Navigation Bar (Visible only on mobile/tablet) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-brown-900/95 border-t border-brown-800 backdrop-blur-lg z-30 flex items-center justify-around px-2 shadow-2xl safe-area-pb">
+        <button
+          onClick={() => setActiveTab('wizard')}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 gap-1 text-[11px] font-medium transition-colors ${
+            activeTab === 'wizard'
+              ? 'text-amber-400 font-bold'
+              : 'text-stone-400 hover:text-stone-200'
+          }`}
+        >
+          <div className={`p-1 rounded-xl transition ${activeTab === 'wizard' ? 'bg-amber-500/20' : ''}`}>
+            <Users className="w-5 h-5" />
+          </div>
+          <span>마법사</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('canvas')}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 gap-1 text-[11px] font-medium transition-colors ${
+            activeTab === 'canvas'
+              ? 'text-amber-400 font-bold'
+              : 'text-stone-400 hover:text-stone-200'
+          }`}
+        >
+          <div className={`p-1 rounded-xl transition ${activeTab === 'canvas' ? 'bg-amber-500/20' : ''}`}>
+            <GitFork className="w-5 h-5" />
+          </div>
+          <span>가계도</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('visualizer')}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 gap-1 text-[11px] font-medium transition-colors ${
+            activeTab === 'visualizer'
+              ? 'text-amber-400 font-bold'
+              : 'text-stone-400 hover:text-stone-200'
+          }`}
+        >
+          <div className={`p-1 rounded-xl transition ${activeTab === 'visualizer' ? 'bg-amber-500/20' : ''}`}>
+            <Calculator className="w-5 h-5" />
+          </div>
+          <span>계산과정</span>
+        </button>
+      </nav>
 
       {/* Print / PDF Modal */}
       <PrintReportModal
@@ -217,19 +263,19 @@ export default function App() {
 
       {/* Download Success Toast Notification */}
       {downloadSuccessToast && (
-        <div className="fixed top-16 right-6 z-50 flex items-center gap-3 bg-slate-900/95 text-emerald-200 border border-emerald-500/50 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-emerald-500/30">
+        <div className="fixed top-16 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto z-50 flex items-center gap-3 bg-brown-900/95 text-emerald-200 border border-emerald-600/50 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-emerald-500/30">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
             <CheckCircle className="w-5 h-5" />
           </div>
-          <div className="text-xs">
+          <div className="text-xs min-w-0">
             <div className="font-bold text-white flex items-center gap-1.5">
               <span>엑셀 다운로드 완료</span>
               <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-normal">저장됨</span>
             </div>
-            <div className="text-emerald-300 font-mono text-[11px] truncate max-w-xs mt-0.5">
+            <div className="text-emerald-300 font-mono text-[11px] truncate mt-0.5">
               {downloadSuccessToast}
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">
+            <div className="text-[10px] text-stone-400 mt-0.5">
               브라우저 다운로드 폴더에 저장되었습니다.
             </div>
           </div>

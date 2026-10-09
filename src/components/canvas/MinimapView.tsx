@@ -68,7 +68,7 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
       const mw = CANVAS_CONSTANTS.NODE_WIDTH * scale;
       const mh = CANVAS_CONSTANTS.NODE_HEIGHT * scale;
 
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = '#d97706';
       ctx.fillRect(mx, my, Math.max(mw, 4), Math.max(mh, 3));
     }
 
@@ -81,10 +81,10 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
     const rW = (viewWorldMax.x - viewWorldMin.x) * scale;
     const rH = (viewWorldMax.y - viewWorldMin.y) * scale;
 
-    ctx.strokeStyle = '#06b6d4'; // Cyan
+    ctx.strokeStyle = '#f59e0b'; // Amber Gold
     ctx.lineWidth = 1.5;
     ctx.strokeRect(rX, rY, rW, rH);
-    ctx.fillStyle = 'rgba(6, 182, 212, 0.15)';
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
     ctx.fillRect(rX, rY, rW, rH);
   }, [persons, viewport, canvasWidth, canvasHeight]);
 
@@ -133,14 +133,14 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
   };
 
   return (
-    <div className="absolute bottom-4 left-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-xl p-2 shadow-2xl">
-      <div className="text-[10px] text-slate-400 font-medium mb-1 px-1">미니맵</div>
+    <div className="hidden sm:block absolute bottom-4 left-4 z-10 bg-brown-900/90 backdrop-blur border border-brown-800 rounded-xl p-2 shadow-2xl">
+      <div className="text-[10px] text-stone-400 font-medium mb-1 px-1">미니맵</div>
       <canvas
         ref={canvasRef}
         width={miniW}
         height={miniH}
         onClick={handleCanvasClick}
-        className="rounded bg-slate-950 border border-slate-800 cursor-crosshair"
+        className="rounded bg-brown-950 border border-brown-800/80 cursor-crosshair"
       />
     </div>
   );

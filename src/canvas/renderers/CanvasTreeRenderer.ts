@@ -54,7 +54,7 @@ export class CanvasTreeRenderer {
     height: number,
     viewport: CanvasViewport
   ) {
-    ctx.fillStyle = '#090d16';
+    ctx.fillStyle = '#0f0c0a'; // Deep espresso dark background
     ctx.fillRect(0, 0, width, height);
 
     const gridSize = 30 * viewport.zoom;
@@ -63,7 +63,7 @@ export class CanvasTreeRenderer {
     const startX = (viewport.panX * viewport.zoom) % gridSize;
     const startY = (viewport.panY * viewport.zoom) % gridSize;
 
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.12)';
+    ctx.fillStyle = 'rgba(217, 180, 140, 0.12)'; // Warm bronze dot grid
     for (let x = startX; x < width; x += gridSize) {
       for (let y = startY; y < height; y += gridSize) {
         ctx.beginPath();
@@ -108,11 +108,11 @@ export class CanvasTreeRenderer {
     for (const sp of routed.spouseLines) {
       ctx.save();
       if (sp.isDivorced) {
-        ctx.strokeStyle = '#64748b';
+        ctx.strokeStyle = '#78716c';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
       } else {
-        ctx.strokeStyle = '#ec4899'; // Pink
+        ctx.strokeStyle = '#e11d48'; // Rose red
         ctx.lineWidth = 2;
       }
 
@@ -127,15 +127,15 @@ export class CanvasTreeRenderer {
 
       // Middle badge
       ctx.setLineDash([]);
-      ctx.fillStyle = '#1e1b4b';
-      ctx.strokeStyle = sp.isDivorced ? '#64748b' : '#ec4899';
+      ctx.fillStyle = '#261b16';
+      ctx.strokeStyle = sp.isDivorced ? '#78716c' : '#e11d48';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(sp.center.x, sp.center.y, 10, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = sp.isDivorced ? '#94a3b8' : '#f472b6';
+      ctx.fillStyle = sp.isDivorced ? '#a8a29e' : '#fda4af';
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -147,7 +147,7 @@ export class CanvasTreeRenderer {
     // 2. Render family buses (Parent-Child)
     for (const bus of routed.familyBuses) {
       ctx.save();
-      ctx.strokeStyle = '#38bdf8'; // Sky blue
+      ctx.strokeStyle = '#d97706'; // Warm Bronze / Amber gold
       ctx.lineWidth = 2;
 
       // Vertical drop from parents
@@ -167,7 +167,7 @@ export class CanvasTreeRenderer {
       ctx.stroke();
 
       // Bus connection points
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = '#f59e0b';
       for (const entry of bus.childEntries) {
         ctx.beginPath();
         ctx.arc(entry.end.x, entry.end.y, 3, 0, Math.PI * 2);
@@ -195,16 +195,16 @@ export class CanvasTreeRenderer {
       ctx.save();
 
       // Card Status Colors
-      let borderColor = '#475569'; // Slate-600
+      let borderColor = '#57483e'; // Warm brown border
       let statusBadgeText = '';
-      let statusBadgeBg = 'rgba(71, 85, 105, 0.4)';
-      let statusBadgeColor = '#94a3b8';
+      let statusBadgeBg = 'rgba(87, 72, 62, 0.4)';
+      let statusBadgeColor = '#d6d3d1';
 
       if (isDeceasedPerson) {
-        borderColor = '#38bdf8'; // Sky-400
+        borderColor = '#d97706'; // Amber-600 (Deceased gold)
         statusBadgeText = '피상속인';
-        statusBadgeBg = 'rgba(56, 189, 248, 0.2)';
-        statusBadgeColor = '#38bdf8';
+        statusBadgeBg = 'rgba(217, 119, 6, 0.25)';
+        statusBadgeColor = '#fbbf24';
       } else if (person.isDisqualified) {
         borderColor = '#ef4444'; // Red
         statusBadgeText = '상속결격';
@@ -216,15 +216,15 @@ export class CanvasTreeRenderer {
         statusBadgeBg = 'rgba(244, 63, 94, 0.2)';
         statusBadgeColor = '#f43f5e';
       } else if (person.hasRenounced) {
-        borderColor = '#f59e0b'; // Amber
+        borderColor = '#b45309'; // Brown amber
         statusBadgeText = '상속포기';
-        statusBadgeBg = 'rgba(245, 158, 11, 0.2)';
+        statusBadgeBg = 'rgba(180, 83, 9, 0.2)';
         statusBadgeColor = '#f59e0b';
       } else if (person.isDeceased) {
-        borderColor = '#64748b'; // Slate-500
+        borderColor = '#78716c'; // Stone-500
         statusBadgeText = '선사망';
-        statusBadgeBg = 'rgba(100, 116, 139, 0.3)';
-        statusBadgeColor = '#cbd5e1';
+        statusBadgeBg = 'rgba(120, 113, 108, 0.3)';
+        statusBadgeColor = '#d6d3d1';
       } else if (heirResult) {
         if (heirResult.status === 'VALID_HEIR') {
           borderColor = '#10b981'; // Emerald
@@ -241,22 +241,22 @@ export class CanvasTreeRenderer {
 
       // Selection glow
       if (isSelected) {
-        ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 12;
+        ctx.shadowColor = '#f59e0b'; // Amber gold glow
+        ctx.shadowBlur = 14;
       } else if (isHovered) {
-        ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+        ctx.shadowColor = 'rgba(217, 180, 140, 0.25)';
         ctx.shadowBlur = 8;
       }
 
       // Card Background (Rounded Rectangle)
       ctx.beginPath();
       this.roundedRect(ctx, x, y, nodeW, nodeH, radius);
-      ctx.fillStyle = '#111827'; // Gray-900
+      ctx.fillStyle = '#1e1814'; // Dark Mahogany / Warm Walnut
       ctx.fill();
 
       // Card Border
       ctx.lineWidth = isSelected ? 2.5 : 1.5;
-      ctx.strokeStyle = isSelected ? '#38bdf8' : borderColor;
+      ctx.strokeStyle = isSelected ? '#f59e0b' : borderColor;
       ctx.stroke();
 
       // Reset shadow
@@ -273,7 +273,7 @@ export class CanvasTreeRenderer {
 
       // Gender & Name
       const genderSymbol = person.gender === 'MALE' ? '♂' : '♀';
-      const genderColor = person.gender === 'MALE' ? '#38bdf8' : '#f472b6';
+      const genderColor = person.gender === 'MALE' ? '#f59e0b' : '#fb7185';
 
       ctx.font = 'bold 13px sans-serif';
       ctx.fillStyle = genderColor;
@@ -282,7 +282,7 @@ export class CanvasTreeRenderer {
       ctx.fillText(genderSymbol, x + 12, y + 14);
 
       ctx.font = 'bold 13px sans-serif';
-      ctx.fillStyle = '#f8fafc';
+      ctx.fillStyle = '#f5f5f4';
       ctx.fillText(person.name, x + 28, y + 14);
 
       // Status Badge
@@ -303,7 +303,7 @@ export class CanvasTreeRenderer {
       }
 
       // Divider line
-      ctx.strokeStyle = 'rgba(71, 85, 105, 0.3)';
+      ctx.strokeStyle = 'rgba(120, 113, 108, 0.25)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x + 10, y + 36);
@@ -317,7 +317,7 @@ export class CanvasTreeRenderer {
       if (heirResult && heirResult.finalConcreteShareWon > 0n) {
         // Legal Share Rate
         ctx.font = '10px sans-serif';
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = '#a8a29e';
         ctx.fillText(`법정 지분: ${heirResult.statutoryShareRate.toFractionString()}`, x + 12, y + 43);
 
         // Final Share Amount
@@ -334,7 +334,7 @@ export class CanvasTreeRenderer {
         }
       } else if (person.contributionAmountWon > 0n || person.specialBenefits.length > 0) {
         ctx.font = '10px sans-serif';
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = '#a8a29e';
         if (person.contributionAmountWon > 0n) {
           ctx.fillText(`기여분: ${this.formatCurrencyWon(person.contributionAmountWon)}`, x + 12, y + 43);
         }
@@ -344,7 +344,7 @@ export class CanvasTreeRenderer {
         }
       } else {
         ctx.font = '10px sans-serif';
-        ctx.fillStyle = '#64748b';
+        ctx.fillStyle = '#78716c';
         ctx.fillText(isDeceasedPerson ? '상속개시일 기준 피상속인' : '클릭하여 상세 편집', x + 12, y + 52);
       }
 
