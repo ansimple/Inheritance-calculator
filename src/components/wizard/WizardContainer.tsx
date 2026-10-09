@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useInheritanceStore } from '../../state/useInheritanceStore';
 import { Gender } from '../../domain/models/Person';
+import { WonCurrencyInput } from '../common/WonCurrencyInput';
 
 export const WizardContainer: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -67,9 +68,11 @@ export const WizardContainer: React.FC = () => {
     const abs = amt < 0n ? -amt : amt;
     const eok = abs / 100_000_000n;
     const man = (abs % 100_000_000n) / 10_000n;
+    const rest = abs % 10_000n;
     let res = '';
     if (eok > 0n) res += `${eok}억 `;
     if (man > 0n) res += `${man}만 `;
+    if (eok === 0n && man === 0n && rest > 0n) res += `${rest.toLocaleString()}`;
     res = res.trim() + '원';
     return amt < 0n ? `-${res}` : res;
   };
@@ -285,14 +288,10 @@ export const WizardContainer: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-stone-400 block mb-1">기여분 (원)</label>
-                      <input
-                        type="text"
-                        value={spouse.contributionAmountWon > 0n ? spouse.contributionAmountWon.toString() : ''}
+                      <WonCurrencyInput
+                        value={spouse.contributionAmountWon}
                         placeholder="0"
-                        onChange={(e) => {
-                          const val = BigInt(e.target.value.replace(/[^0-9]/g, '') || '0');
-                          updatePerson(spouse.id, { contributionAmountWon: val });
-                        }}
+                        onChange={(val) => updatePerson(spouse.id, { contributionAmountWon: val })}
                         className="w-full bg-brown-900 border border-brown-800 rounded-lg px-3 py-2 text-white font-mono"
                       />
                     </div>
@@ -548,14 +547,10 @@ export const WizardContainer: React.FC = () => {
                   <label className="block text-xs font-semibold text-stone-300 mb-1.5">
                     부동산 가액 (원)
                   </label>
-                  <input
-                    type="text"
-                    value={estate.activeRealEstateWon > 0n ? estate.activeRealEstateWon.toString() : ''}
-                    placeholder="예: 500000000"
-                    onChange={(e) => {
-                      const val = BigInt(e.target.value.replace(/[^0-9]/g, '') || '0');
-                      updateEstate({ activeRealEstateWon: val });
-                    }}
+                  <WonCurrencyInput
+                    value={estate.activeRealEstateWon}
+                    placeholder="0"
+                    onChange={(val) => updateEstate({ activeRealEstateWon: val })}
                     className="w-full bg-brown-950 border border-brown-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 font-mono"
                   />
                   <span className="text-[11px] text-stone-400 mt-1 block">
@@ -567,14 +562,10 @@ export const WizardContainer: React.FC = () => {
                   <label className="block text-xs font-semibold text-stone-300 mb-1.5">
                     금융 재산 (예금, 주식 등) (원)
                   </label>
-                  <input
-                    type="text"
-                    value={estate.activeFinancialWon > 0n ? estate.activeFinancialWon.toString() : ''}
-                    placeholder="예: 200000000"
-                    onChange={(e) => {
-                      const val = BigInt(e.target.value.replace(/[^0-9]/g, '') || '0');
-                      updateEstate({ activeFinancialWon: val });
-                    }}
+                  <WonCurrencyInput
+                    value={estate.activeFinancialWon}
+                    placeholder="0"
+                    onChange={(val) => updateEstate({ activeFinancialWon: val })}
                     className="w-full bg-brown-950 border border-brown-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 font-mono"
                   />
                   <span className="text-[11px] text-stone-400 mt-1 block">
@@ -586,14 +577,10 @@ export const WizardContainer: React.FC = () => {
                   <label className="block text-xs font-semibold text-stone-300 mb-1.5">
                     기타 적극재산 (원)
                   </label>
-                  <input
-                    type="text"
-                    value={estate.activeOtherWon > 0n ? estate.activeOtherWon.toString() : ''}
+                  <WonCurrencyInput
+                    value={estate.activeOtherWon}
                     placeholder="0"
-                    onChange={(e) => {
-                      const val = BigInt(e.target.value.replace(/[^0-9]/g, '') || '0');
-                      updateEstate({ activeOtherWon: val });
-                    }}
+                    onChange={(val) => updateEstate({ activeOtherWon: val })}
                     className="w-full bg-brown-950 border border-brown-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 font-mono"
                   />
                   <span className="text-[11px] text-stone-400 mt-1 block">
@@ -605,14 +592,10 @@ export const WizardContainer: React.FC = () => {
                   <label className="block text-xs font-semibold text-rose-300 mb-1.5">
                     상속 채무 (소극재산, 대출금) (원)
                   </label>
-                  <input
-                    type="text"
-                    value={estate.passiveDebtWon > 0n ? estate.passiveDebtWon.toString() : ''}
+                  <WonCurrencyInput
+                    value={estate.passiveDebtWon}
                     placeholder="0"
-                    onChange={(e) => {
-                      const val = BigInt(e.target.value.replace(/[^0-9]/g, '') || '0');
-                      updateEstate({ passiveDebtWon: val });
-                    }}
+                    onChange={(val) => updateEstate({ passiveDebtWon: val })}
                     className="w-full bg-brown-950 border border-rose-900/40 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500 font-mono"
                   />
                   <span className="text-[11px] text-rose-400 mt-1 block">

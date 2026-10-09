@@ -89,9 +89,9 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-brown-950 text-stone-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-brown-950 text-stone-100 overflow-hidden font-sans print:h-auto print:overflow-visible print:bg-white print:text-black">
       {/* Top Navigation Bar */}
-      <header className="h-14 border-b border-brown-800 bg-brown-900/95 backdrop-blur px-3 sm:px-4 flex items-center justify-between z-20 shrink-0">
+      <header className="h-14 border-b border-brown-800 bg-brown-900/95 backdrop-blur px-3 sm:px-4 flex items-center justify-between z-20 shrink-0 no-print print:hidden">
         {/* Logo and Brand (Without '상' icon) */}
         <div className="flex items-center min-w-0">
           <h1 className="text-xs sm:text-sm font-semibold tracking-tight text-stone-100 flex items-center gap-2 truncate">
@@ -204,14 +204,14 @@ export default function App() {
       </header>
 
       {/* Main Workspace Body */}
-      <main className="flex-1 relative overflow-hidden bg-brown-950 pb-16 md:pb-0">
+      <main className="flex-1 relative overflow-hidden bg-brown-950 pb-16 md:pb-0 no-print print:hidden">
         {activeTab === 'wizard' && <WizardContainer />}
         {activeTab === 'canvas' && <FamilyTreeCanvas />}
         {activeTab === 'visualizer' && <PipelineFlowGraph />}
       </main>
 
       {/* Mobile Bottom Navigation Bar (Visible only on mobile/tablet) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-brown-900/95 border-t border-brown-800 backdrop-blur-lg z-30 flex items-center justify-around px-2 shadow-2xl safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-brown-900/95 border-t border-brown-800 backdrop-blur-lg z-30 flex items-center justify-around px-2 shadow-2xl safe-area-pb no-print print:hidden">
         <button
           onClick={() => setActiveTab('wizard')}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 gap-1 text-[11px] font-medium transition-colors ${
@@ -263,7 +263,7 @@ export default function App() {
 
       {/* Download Success Toast Notification */}
       {downloadSuccessToast && (
-        <div className="fixed top-16 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto z-50 flex items-center gap-3 bg-brown-900/95 text-emerald-200 border border-emerald-600/50 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-emerald-500/30">
+        <div className="fixed top-16 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto z-50 flex items-center gap-3 bg-brown-900/95 text-emerald-200 border border-emerald-600/50 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md transition-all duration-300 ring-1 ring-emerald-500/30 no-print print:hidden">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
             <CheckCircle className="w-5 h-5" />
           </div>
