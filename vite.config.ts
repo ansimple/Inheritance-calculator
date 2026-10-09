@@ -54,7 +54,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'zustand', 'lucide-react'],
-          xlsx: ['xlsx'],
+          xlsx: ['xlsx-js-style'],
         },
       },
     },
