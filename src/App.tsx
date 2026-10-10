@@ -9,9 +9,13 @@ import {
   RotateCw,
   CheckCircle,
   Coins,
-  Scale
+  Scale,
+  Download,
+  Share,
+  X
 } from 'lucide-react';
 import { useInheritanceStore } from './state/useInheritanceStore';
+import { usePwaInstall } from './hooks/usePwaInstall';
 import { WizardContainer } from './components/wizard/WizardContainer';
 import { FamilyTreeCanvas } from './components/canvas/FamilyTreeCanvas';
 import { PipelineFlowGraph } from './components/visualizer/PipelineFlowGraph';
@@ -23,6 +27,7 @@ export default function App() {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [downloadSuccessToast, setDownloadSuccessToast] = useState<string | null>(null);
   const [isExported, setIsExported] = useState(false);
+  const { isInstallable, isInstalled, showIosPrompt, setShowIosPrompt, installApp } = usePwaInstall();
 
   const {
     deceasedId,
@@ -234,6 +239,18 @@ export default function App() {
             <span className="hidden sm:inline">인쇄</span>
             <span className="hidden xl:inline">/PDF</span>
           </button>
+
+          {/* PWA Install Button (Appears when browser supports PWA installation and not already installed) */}
+          {isInstallable && !isInstalled && (
+            <button
+              onClick={installApp}
+              title="앱으로 설치하여 오프라인 및 전체화면에서 편리하게 사용하세요"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-semibold shadow-sm transition shrink-0 animate-pulse hover:animate-none"
+            >
+              <Download className="w-3.5 h-3.5 pointer-events-none" />
+              <span className="hidden sm:inline">앱 설치</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -312,6 +329,48 @@ export default function App() {
             <div className="text-[10px] text-stone-400 mt-0.5">
               브라우저 다운로드 폴더에 저장되었습니다.
             </div>
+          </div>
+        </div>
+      )}
+      {/* iOS PWA Install Guide Modal */}
+      {showIosPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm no-print">
+          <div className="w-full max-w-sm bg-brown-900 border border-brown-700 rounded-2xl p-5 shadow-2xl text-stone-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-brown-800 pb-3">
+              <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                <Download className="w-4 h-4 text-amber-400" />
+                홈 화면에 앱 설치하기
+              </h3>
+              <button
+                onClick={() => setShowIosPrompt(false)}
+                className="text-stone-400 hover:text-white p-1 rounded-lg hover:bg-brown-800 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3 text-xs leading-relaxed text-stone-300">
+              <p>Apple Safari에서는 아래 순서로 홈 화면에 앱으로 추가할 수 있습니다:</p>
+              <ol className="space-y-2 bg-brown-950 p-3.5 rounded-xl border border-brown-800 text-stone-300">
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-amber-400 shrink-0">1.</span>
+                  <span>Safari 화면 하단 도구막대의 <strong>공유 아이콘</strong>(<Share className="w-3.5 h-3.5 inline mx-1 text-sky-400" />)을 탭합니다.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-amber-400 shrink-0">2.</span>
+                  <span>메뉴에서 아래로 스크롤하여 <strong>[홈 화면에 추가]</strong>를 선택합니다.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-amber-400 shrink-0">3.</span>
+                  <span>우측 상단의 <strong>[추가]</strong>를 누르면 홈 화면에 앱 아이콘이 생성됩니다.</span>
+                </li>
+              </ol>
+            </div>
+            <button
+              onClick={() => setShowIosPrompt(false)}
+              className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow-md transition"
+            >
+              확인했습니다
+            </button>
           </div>
         </div>
       )}
