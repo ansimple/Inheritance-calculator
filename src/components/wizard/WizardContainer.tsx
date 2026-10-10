@@ -25,12 +25,21 @@ export const WizardContainer: React.FC = () => {
     relationships,
     estate,
     calculationResult,
+    calculationMode,
     setDeceasedInfo,
     addPerson,
     updatePerson,
     removePerson,
     updateEstate,
   } = useInheritanceStore();
+
+  const isShareOnly = calculationMode === 'SHARE_ONLY';
+  const maxStep = isShareOnly ? 5 : 7;
+
+  // Ensure current step stays in bound when switching modes
+  if (currentStep > maxStep) {
+    setCurrentStep(maxStep);
+  }
 
   const deceased = allPersons.get(deceasedId);
   const spouseEdge = relationships.find(
@@ -52,15 +61,23 @@ export const WizardContainer: React.FC = () => {
     );
   });
 
-  const steps = [
-    { num: 1, label: '고인 정보', icon: UserCheck },
-    { num: 2, label: '배우자', icon: Heart },
-    { num: 3, label: '직계비속(자녀)', icon: Baby },
-    { num: 4, label: '직계존속(부모)', icon: Users },
-    { num: 5, label: '상속 재산/채무', icon: Building2 },
-    { num: 6, label: '기여분/증여', icon: Coins },
-    { num: 7, label: '최종 결과', icon: Scale },
-  ];
+  const steps = isShareOnly
+    ? [
+        { num: 1, label: '고인 정보', icon: UserCheck },
+        { num: 2, label: '배우자', icon: Heart },
+        { num: 3, label: '직계비속(자녀)', icon: Baby },
+        { num: 4, label: '직계존속(부모)', icon: Users },
+        { num: 5, label: '법정 지분율 결과', icon: Scale },
+      ]
+    : [
+        { num: 1, label: '고인 정보', icon: UserCheck },
+        { num: 2, label: '배우자', icon: Heart },
+        { num: 3, label: '직계비속(자녀)', icon: Baby },
+        { num: 4, label: '직계존속(부모)', icon: Users },
+        { num: 5, label: '상속 재산/채무', icon: Building2 },
+        { num: 6, label: '기여분/증여', icon: Coins },
+        { num: 7, label: '최종 결과', icon: Scale },
+      ];
 
   // Helper to format currency
   const formatWon = (amt: bigint) => {
@@ -529,8 +546,128 @@ export const WizardContainer: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 5: 상속 재산 및 채무 */}
-          {currentStep === 5 && (
+          {/* STEP 5 (SHARE_ONLY): 법정 지분율 결과 */}
+          {currentStep === 5 && isShareOnly && (
+            <div className="space-y-6 flex-1">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Scale className="w-6 h-6 text-emerald-400" />
+                  상속인별 법정 상속지분율 및 유류분율 분석 결과
+                </h3>
+                <p className="text-sm text-stone-400 mt-1">
+                  민법 제1000조(상속순위), 제1009조(법정상속분), 제1001조·제1003조(대습상속) 및 제1112조(유류분)에 따른 법정 지분율입니다.
+                </p>
+              </div>
+
+              {calculationResult && (
+                <div className="space-y-5">
+                  {/* Summary Metric Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-4 rounded-2xl bg-brown-950 border border-emerald-900/40">
+                      <div className="text-xs text-stone-400">적용 법령 기준</div>
+                      <div className="text-sm font-bold text-emerald-400 mt-1">
+                        민법 제1009조 (배우자 1.5할 가산)
+                      </div>
+                      <div className="text-[11px] text-stone-500 mt-0.5">상속개시: {estate.openingDate}</div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-brown-950 border border-brown-800">
+                      <div className="text-xs text-stone-400">유효 상속인 인원</div>
+                      <div className="text-lg font-bold text-white mt-1">
+                        {calculationResult.heirResults.filter(h => h.statutoryShareRate.numerator > 0n).length} 명
+                      </div>
+                      <div className="text-[11px] text-stone-500 mt-0.5">지분 배분 대상 상속인</div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-brown-950 border border-amber-900/40">
+                      <div className="text-xs text-stone-400">유류분 산정 기준</div>
+                      <div className="text-sm font-bold text-amber-400 mt-1">
+                        배우자·직계비속 1/2 · 직계존속 1/3
+                      </div>
+                      <div className="text-[11px] text-stone-500 mt-0.5">2026 헌재 2020헌바43등 반영</div>
+                    </div>
+                  </div>
+
+                  {/* Heir Statutory Share Table */}
+                  <div className="overflow-x-auto rounded-2xl border border-brown-800">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-brown-950 text-stone-400 uppercase tracking-wider text-[10px]">
+                        <tr>
+                          <th className="px-4 py-3">상속인</th>
+                          <th className="px-4 py-3">상속 관계</th>
+                          <th className="px-4 py-3">상속 지위</th>
+                          <th className="px-4 py-3 text-center">법정상속비율 (분수)</th>
+                          <th className="px-4 py-3 text-right">지분율 (%)</th>
+                          <th className="px-4 py-3 text-center">유류분율 (분수)</th>
+                          <th className="px-4 py-3 text-right">유류분율 (%)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-brown-800/60 bg-brown-900/40">
+                        {calculationResult.heirResults.map((hr) => {
+                          const p = allPersons.get(hr.personId);
+                          const isSpouse = spouse && spouse.id === hr.personId;
+                          const reserveRate = hr.statutoryShareRate.multiply(1n, 2n);
+                          const isZero = hr.statutoryShareRate.numerator === 0n;
+
+                          return (
+                            <tr key={hr.personId} className="hover:bg-brown-800/30">
+                              <td className="px-4 py-3.5 font-bold text-white flex items-center gap-1.5">
+                                <span>{hr.name}</span>
+                                {isSpouse && <span className="text-[10px] text-pink-400 font-normal">(배우자)</span>}
+                              </td>
+                              <td className="px-4 py-3.5 text-stone-300">
+                                {isSpouse ? '배우자' : p?.gender === 'MALE' ? '직계비속 (남)' : '직계비속 (여)'}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                    isZero
+                                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  }`}
+                                >
+                                  {isZero ? '상속 제외' : hr.status === 'VALID_HEIR' ? '상속인' : '대습상속인'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-center font-mono font-bold text-emerald-400 text-sm">
+                                {isZero ? '0' : hr.statutoryShareRate.toFractionString()}
+                              </td>
+                              <td className="px-4 py-3.5 text-right font-mono font-bold text-white">
+                                {isZero ? '0.00%' : `${(hr.statutoryShareRate.toNumber() * 100).toFixed(2)}%`}
+                              </td>
+                              <td className="px-4 py-3.5 text-center font-mono font-medium text-amber-400">
+                                {isZero ? '0' : reserveRate.toFractionString()}
+                              </td>
+                              <td className="px-4 py-3.5 text-right font-mono text-amber-300">
+                                {isZero ? '0.00%' : `${(reserveRate.toNumber() * 100).toFixed(2)}%`}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Legal Formula Explanations */}
+                  <div className="p-4 rounded-2xl bg-brown-950/80 border border-brown-800 space-y-2">
+                    <div className="text-xs font-bold text-stone-200 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      민법상 법정 상속지분율 산출 원리
+                    </div>
+                    <ul className="text-xs text-stone-400 space-y-1 list-disc list-inside">
+                      <li>동순위 상속인이 수인인 때에는 그 상속분은 균등하게 나눕니다 (민법 제1009조 제1항).</li>
+                      <li>피상속인의 배우자의 상속분은 직계비속 또는 직계존속과 공동으로 상속하는 때에는 그 상속분의 5할을 가산합니다 (1.5 : 1) (민법 제1009조 제2항).</li>
+                      <li>대습상속인의 상속분은 피대습인이 받을 상속분의 한도 내에서 균등 분배됩니다 (민법 제1001조, 제1010조).</li>
+                      <li>유류분은 피상속인의 배우자 및 직계비속의 경우 법정상속분의 1/2이며, 형제자매는 2026년 개정 민법에 의해 제외되었습니다.</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 5 (FULL MODE): 상속 재산 및 채무 */}
+          {currentStep === 5 && !isShareOnly && (
             <div className="space-y-6 flex-1">
               <div>
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -606,8 +743,8 @@ export const WizardContainer: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 6: 특별수익 및 기여분 */}
-          {currentStep === 6 && (
+          {/* STEP 6 (FULL MODE): 특별수익 및 기여분 */}
+          {currentStep === 6 && !isShareOnly && (
             <div className="space-y-6 flex-1">
               <div>
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -642,8 +779,8 @@ export const WizardContainer: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 7: 최종 결과 */}
-          {currentStep === 7 && (
+          {/* STEP 7 (FULL MODE): 최종 결과 */}
+          {currentStep === 7 && !isShareOnly && (
             <div className="space-y-6 flex-1">
               <div>
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -774,9 +911,9 @@ export const WizardContainer: React.FC = () => {
               이전 단계
             </button>
 
-            {currentStep < 7 ? (
+            {currentStep < maxStep ? (
               <button
-                onClick={() => setCurrentStep((s) => Math.min(7, s + 1))}
+                onClick={() => setCurrentStep((s) => Math.min(maxStep, s + 1))}
                 className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/25 transition"
               >
                 다음 단계

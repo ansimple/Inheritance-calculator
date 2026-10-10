@@ -15,6 +15,7 @@ export const FamilyTreeCanvas: React.FC = () => {
     allPersons,
     relationships,
     calculationResult,
+    calculationMode,
     selectedPersonId,
     selectPerson,
     updatePersonPosition,
@@ -79,6 +80,7 @@ export const FamilyTreeCanvas: React.FC = () => {
       heirResults: heirResultsMap,
       selectedPersonId,
       hoveredPersonId,
+      calculationMode,
       activeGuidelines,
     });
   }, [
@@ -89,6 +91,7 @@ export const FamilyTreeCanvas: React.FC = () => {
     heirResultsMap,
     selectedPersonId,
     hoveredPersonId,
+    calculationMode,
     activeGuidelines,
   ]);
 
@@ -235,7 +238,7 @@ export const FamilyTreeCanvas: React.FC = () => {
       let newWorldX = (dragState.startNodeWorldX ?? 0) + deltaWorldX;
       let newWorldY = (dragState.startNodeWorldY ?? 0) + deltaWorldY;
 
-      // 5px Grid Magnet Snap
+      // 15px Grid Magnet Snap (strictly aligned with background dots)
       newWorldX = CanvasViewport.snapToGrid(newWorldX, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
       newWorldY = CanvasViewport.snapToGrid(newWorldY, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
 
@@ -264,8 +267,11 @@ export const FamilyTreeCanvas: React.FC = () => {
         }
       }
 
-      setActiveGuidelinesLocal({ horizontalY: guideH, verticalX: guideV });
-      setGuidelines({ horizontalY: guideH, verticalX: guideV });
+      // Re-snap to guarantee 15px grid dot alignment at all times
+      newWorldX = CanvasViewport.snapToGrid(newWorldX, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
+      newWorldY = CanvasViewport.snapToGrid(newWorldY, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
+      if (guideH !== undefined) guideH = CanvasViewport.snapToGrid(guideH, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
+      if (guideV !== undefined) guideV = CanvasViewport.snapToGrid(guideV, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
 
       updatePersonPosition(dragState.nodeId, newWorldX, newWorldY);
       setDragState({

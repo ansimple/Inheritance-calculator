@@ -20,14 +20,14 @@ export interface RectBounds {
 }
 
 export const CANVAS_CONSTANTS = {
-  NODE_WIDTH: 200,
-  NODE_HEIGHT: 96,
+  NODE_WIDTH: 210, // 15 * 14 (exact multiple of 15px grid dot step)
+  NODE_HEIGHT: 90, // 15 * 6 (exact multiple of 15px grid dot step)
   CORNER_RADIUS: 8,
-  GEN_LEVEL_HEIGHT: 180,
-  SIBLING_SPACING: 50,
-  SPOUSE_SPACING: 40,
-  MAGNET_GRID_STEP: 5,
-  GUIDELINE_THRESHOLD: 8,
+  GEN_LEVEL_HEIGHT: 180, // 15 * 12
+  SIBLING_SPACING: 45, // 15 * 3
+  SPOUSE_SPACING: 45, // 15 * 3
+  MAGNET_GRID_STEP: 15, // Grid dot unit: exactly 15px
+  GUIDELINE_THRESHOLD: 10,
   ZOOM_MIN: 0.2,
   ZOOM_MAX: 3.0,
 };

@@ -13,12 +13,17 @@ export interface TreeSnapshot {
   estate: EstateData;
 }
 
+export type CalculationMode = 'FULL' | 'SHARE_ONLY';
+
 export interface InheritanceState {
   // Core data
   deceasedId: string;
   allPersons: Map<string, PersonNode>;
   relationships: RelationshipEdge[];
   estate: EstateData;
+
+  // Calculation & Operation Mode
+  calculationMode: CalculationMode;
 
   // Selected & UI state
   selectedPersonId: string | null;
@@ -30,6 +35,8 @@ export interface InheritanceState {
   canRedo: boolean;
 
   // Actions
+  setCalculationMode: (mode: CalculationMode) => void;
+  toggleCalculationMode: () => void;
   setDeceasedInfo: (updates: Partial<PersonNode>) => void;
   addPerson: (
     person: Omit<PersonNode, 'canvasX' | 'canvasY'>,
@@ -67,7 +74,7 @@ function createInitialState(): TreeSnapshot {
     contributionAmountWon: 0n,
     specialBenefits: [],
     bequests: [],
-    canvasX: 340,
+    canvasX: 330,
     canvasY: 240,
   };
 
@@ -84,7 +91,7 @@ function createInitialState(): TreeSnapshot {
     contributionAmountWon: 0n,
     specialBenefits: [],
     bequests: [],
-    canvasX: 580,
+    canvasX: 585,
     canvasY: 240,
   };
 
@@ -101,7 +108,7 @@ function createInitialState(): TreeSnapshot {
     contributionAmountWon: 0n,
     specialBenefits: [],
     bequests: [],
-    canvasX: 340,
+    canvasX: 330,
     canvasY: 420,
   };
 
@@ -118,7 +125,7 @@ function createInitialState(): TreeSnapshot {
     contributionAmountWon: 0n,
     specialBenefits: [],
     bequests: [],
-    canvasX: 580,
+    canvasX: 585,
     canvasY: 420,
   };
 
@@ -193,11 +200,18 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
     allPersons: initial.allPersons,
     relationships: initial.relationships,
     estate: initial.estate,
+    calculationMode: 'SHARE_ONLY',
     selectedPersonId: null,
     calculationResult: initialCalc,
     activeGuidelines: {},
     canUndo: false,
     canRedo: false,
+
+    setCalculationMode: (mode) => set({ calculationMode: mode }),
+    toggleCalculationMode: () =>
+      set((state) => ({
+        calculationMode: state.calculationMode === 'SHARE_ONLY' ? 'FULL' : 'SHARE_ONLY',
+      })),
 
     setDeceasedInfo: (updates) => {
       pushSnapshot();
@@ -350,7 +364,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 340,
+          canvasX: 330,
           canvasY: 240,
         };
         const c1: PersonNode = {
@@ -389,7 +403,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 420,
+          canvasX: 435,
           canvasY: 420,
         };
         const c3: PersonNode = {
@@ -405,7 +419,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 660,
+          canvasX: 690,
           canvasY: 420,
         };
 
@@ -443,7 +457,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 340,
+          canvasX: 330,
           canvasY: 240,
         };
         const spouse: PersonNode = {
@@ -459,7 +473,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 580,
+          canvasX: 585,
           canvasY: 240,
         };
         const c1: PersonNode = {
@@ -475,7 +489,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 200,
+          canvasX: 195,
           canvasY: 420,
         };
         const daughterInLaw: PersonNode = {
@@ -491,7 +505,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 440,
+          canvasX: 450,
           canvasY: 420,
         };
         const grandSon: PersonNode = {
@@ -507,7 +521,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 320,
+          canvasX: 330,
           canvasY: 600,
         };
 
@@ -547,7 +561,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 400,
+          canvasX: 390,
           canvasY: 240,
         };
         const mother: PersonNode = {
@@ -563,7 +577,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 520,
+          canvasX: 510,
           canvasY: 60,
         };
         const father: PersonNode = {
@@ -579,7 +593,7 @@ export const useInheritanceStore = create<InheritanceState>((set, get) => {
           contributionAmountWon: 0n,
           specialBenefits: [],
           bequests: [],
-          canvasX: 280,
+          canvasX: 270,
           canvasY: 60,
         };
 

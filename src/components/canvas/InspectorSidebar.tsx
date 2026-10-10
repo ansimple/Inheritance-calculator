@@ -11,7 +11,8 @@ import {
   Maximize2,
   Minimize2,
   RotateCcw,
-  GripHorizontal
+  GripHorizontal,
+  Scale
 } from 'lucide-react';
 import { useInheritanceStore } from '../../state/useInheritanceStore';
 import { AdoptionType, Gender } from '../../domain/models/Person';
@@ -23,6 +24,7 @@ export const InspectorSidebar: React.FC = () => {
     allPersons, 
     deceasedId, 
     calculationResult,
+    calculationMode,
     selectPerson, 
     updatePerson, 
     removePerson 
@@ -55,6 +57,34 @@ export const InspectorSidebar: React.FC = () => {
   const isDeceased = person.id === deceasedId;
   const heirResult = calculationResult?.heirResults.find(h => h.personId === person.id);
 
+  // Determine status badge (sticker) corresponding to the canvas node badge
+  const getStatusBadge = () => {
+    if (isDeceased) {
+      return { text: '피상속인', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' };
+    }
+    if (person.isDisqualified) {
+      return { text: '상속결격', bg: 'bg-red-500/20 text-red-300 border-red-500/40' };
+    }
+    if (person.hasDeprivation) {
+      return { text: '상실선고', bg: 'bg-rose-500/20 text-rose-300 border-rose-500/40' };
+    }
+    if (person.hasRenounced) {
+      return { text: '상속포기', bg: 'bg-amber-700/20 text-amber-400 border-amber-700/40' };
+    }
+    if (person.isDeceased) {
+      return { text: '선사망', bg: 'bg-stone-500/25 text-stone-300 border-stone-500/40' };
+    }
+    if (heirResult?.status === 'VALID_HEIR') {
+      return { text: '상속인', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' };
+    }
+    if (heirResult?.status === 'REPRESENTATIVE_HEIR') {
+      return { text: '대습상속인', bg: 'bg-purple-500/20 text-purple-300 border-purple-500/40' };
+    }
+    return { text: '비상속인', bg: 'bg-stone-700/30 text-stone-400 border-stone-700/50' };
+  };
+
+  const statusBadge = getStatusBadge();
+
   // Compute floating style for desktop viewport
   const getFloatingStyle = (): React.CSSProperties => {
     if (typeof window === 'undefined') return {};
@@ -63,12 +93,12 @@ export const InspectorSidebar: React.FC = () => {
     }
 
     if (isMaximized) {
-      const maxWidth = Math.min(680, window.innerWidth - 40);
+      const curW = Math.max(340, Math.min(window.innerWidth - 40, size.width));
       const maxHeight = window.innerHeight - 80;
       return {
         top: '4.5rem',
         right: '1.25rem',
-        width: `${maxWidth}px`,
+        width: `${curW}px`,
         height: `${maxHeight}px`,
       };
     }
@@ -140,7 +170,8 @@ export const InspectorSidebar: React.FC = () => {
   ) => {
     e.stopPropagation();
     e.preventDefault();
-    if (isMaximized || window.innerWidth < 640) return;
+    if (window.innerWidth < 640) return;
+    if (isMaximized && dir !== 'left') return;
 
     const aside = asideRef.current;
     if (!aside) return;
@@ -156,6 +187,14 @@ export const InspectorSidebar: React.FC = () => {
     const onMove = (moveEv: MouseEvent) => {
       const deltaX = moveEv.clientX - startX;
       const deltaY = moveEv.clientY - startY;
+
+      if (isMaximized) {
+        // In maximized mode, right edge is fixed at 1.25rem, only width adjusts from left wall
+        const candidateW = initW - deltaX;
+        const newW = Math.max(340, Math.min(window.innerWidth - 40, candidateW));
+        setSize((prev) => ({ ...prev, width: newW }));
+        return;
+      }
 
       let newW = initW;
       let newH = initH;
@@ -203,7 +242,8 @@ export const InspectorSidebar: React.FC = () => {
         pos: position,
         size: size,
       };
-      const maxWidth = Math.min(680, window.innerWidth - 40);
+      // Default maximized width reduced by 30% (680px -> 476px)
+      const maxWidth = Math.min(476, window.innerWidth - 40);
       const maxHeight = window.innerHeight - 80;
       setIsMaximized(true);
       setPosition({ x: Math.max(20, window.innerWidth - maxWidth - 20), y: 64 });
@@ -292,13 +332,10 @@ export const InspectorSidebar: React.FC = () => {
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5 truncate">
               <span className="truncate">{person.name}</span>
-              {isDeceased && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-normal shrink-0">
-                  피상속인
-                </span>
-              )}
+              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-normal shrink-0 ${statusBadge.bg}`}>
+                {statusBadge.text}
+              </span>
             </h3>
-            <p className="text-[10px] text-stone-400 font-mono truncate">{person.id}</p>
           </div>
         </div>
 
@@ -335,47 +372,6 @@ export const InspectorSidebar: React.FC = () => {
 
       {/* Scrollable Body Content */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-        {/* Calculated Result Card if Available */}
-        {heirResult && (
-          <div className="p-3.5 rounded-xl bg-brown-950/80 border border-emerald-600/40 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-stone-400">법정상속비율</span>
-              <span className="font-bold text-amber-400">
-                {heirResult.statutoryShareRate.toFractionString()} (
-                {(heirResult.statutoryShareRate.toNumber() * 100).toFixed(1)}%)
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-stone-400">최종 배분액</span>
-              <span className="font-bold text-emerald-400 text-sm">
-                {heirResult.finalConcreteShareWon.toLocaleString()} 원
-              </span>
-            </div>
-
-            {heirResult.allocatedDebtWon > 0n && (
-              <div className="flex items-center justify-between text-[11px] text-rose-400">
-                <span>승계 채무</span>
-                <span>-{heirResult.allocatedDebtWon.toLocaleString()} 원</span>
-              </div>
-            )}
-
-            {heirResult.reserveShortageWon > 0n && (
-              <div className="flex items-center justify-between text-[11px] text-amber-400 pt-1 border-t border-brown-800">
-                <span>유류분 부족(청구)</span>
-                <span>+{heirResult.reserveShortageWon.toLocaleString()} 원</span>
-              </div>
-            )}
-
-            {heirResult.reserveCompensationObligationWon > 0n && (
-              <div className="flex items-center justify-between text-[11px] text-rose-400 pt-1 border-t border-brown-800">
-                <span>유류분 반환 의무</span>
-                <span>-{heirResult.reserveCompensationObligationWon.toLocaleString()} 원</span>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Profile Form */}
         <div className="space-y-3 text-xs">
           <div>
@@ -476,7 +472,22 @@ export const InspectorSidebar: React.FC = () => {
           )}
 
           {/* Contribution Amount */}
-          {!isDeceased && (
+          {!isDeceased && calculationMode === 'SHARE_ONLY' && (
+            <div className="pt-2 border-t border-brown-800">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300/90 leading-relaxed">
+                <p className="font-semibold flex items-center gap-1.5 mb-1 text-amber-300">
+                  <Scale className="w-3.5 h-3.5" />
+                  지분율 모드
+                </p>
+                <p className="text-[11px] text-stone-400">
+                  금액 산정(기여분, 생전 증여, 유증 등)을 생략하고 법정 상속지분율 및 유류분 권리율만 산출합니다. 금액을 정산하시려면 상단 스위치에서 [금액 정산]을 선택하세요.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Contribution Amount */}
+          {!isDeceased && calculationMode === 'FULL' && (
             <div className="pt-2 border-t border-brown-800">
               <label className="text-stone-400 block mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-stone-300 font-semibold text-[11px]">
@@ -495,7 +506,7 @@ export const InspectorSidebar: React.FC = () => {
           )}
 
           {/* Special Benefits (Gifts) */}
-          {!isDeceased && (
+          {!isDeceased && calculationMode === 'FULL' && (
             <div className="pt-2 border-t border-brown-800 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-stone-300 font-semibold text-[11px]">
@@ -567,7 +578,7 @@ export const InspectorSidebar: React.FC = () => {
           )}
 
           {/* Bequests */}
-          {!isDeceased && (
+          {!isDeceased && calculationMode === 'FULL' && (
             <div className="pt-2 border-t border-brown-800 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-stone-300 font-semibold text-[11px]">
@@ -643,35 +654,37 @@ export const InspectorSidebar: React.FC = () => {
       </div>
 
       {/* Resize Handles (Desktop only) */}
+      {/* Left Edge Resize (Available both in normal and maximized mode) */}
+      <div
+        onMouseDown={(e) => handleResizeStart(e, 'left')}
+        className="hidden sm:block absolute top-12 bottom-4 left-0 w-2 cursor-ew-resize z-10"
+        title="좌우 너비 조절"
+      />
+
+      {/* Bottom & Corner Resize Handles (Normal mode only) */}
       {!isMaximized && (
         <>
-          {/* Left Edge Resize */}
-          <div
-            onMouseDown={(e) => handleResizeStart(e, 'left')}
-            className="hidden sm:block absolute top-12 bottom-4 left-0 w-2 cursor-ew-resize hover:bg-amber-500/30 transition-colors z-10"
-            title="좌우 너비 조절"
-          />
           {/* Bottom Edge Resize */}
           <div
             onMouseDown={(e) => handleResizeStart(e, 'bottom')}
-            className="hidden sm:block absolute bottom-0 left-4 right-4 h-2 cursor-ns-resize hover:bg-amber-500/30 transition-colors z-10"
+            className="hidden sm:block absolute bottom-0 left-4 right-4 h-2 cursor-ns-resize z-10"
             title="상하 높이 조절"
           />
           {/* Bottom-Left Corner Resize */}
           <div
             onMouseDown={(e) => handleResizeStart(e, 'bottom-left')}
-            className="hidden sm:block absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize hover:bg-amber-500/40 rounded-bl-2xl transition-colors z-20 group"
+            className="hidden sm:block absolute bottom-0 left-0 w-6 h-6 cursor-nesw-resize rounded-bl-2xl z-20 group"
             title="크기 조절 (가로/세로)"
           >
-            <div className="w-2 h-2 border-b-2 border-l-2 border-amber-400/60 absolute bottom-1 left-1 rounded-bl-sm" />
+            <div className="w-2 h-2 border-b-[1.5px] border-l-[1.5px] border-amber-400/30 absolute bottom-2.5 left-2.5 rounded-bl-[1.5px]" />
           </div>
           {/* Bottom-Right Corner Resize */}
           <div
             onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
-            className="hidden sm:block absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize hover:bg-amber-500/40 rounded-br-2xl transition-colors z-20 group"
+            className="hidden sm:block absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize rounded-br-2xl z-20 group"
             title="크기 조절 (가로/세로)"
           >
-            <div className="w-2 h-2 border-b-2 border-r-2 border-amber-400/60 absolute bottom-1 right-1 rounded-br-sm" />
+            <div className="w-2 h-2 border-b-[1.5px] border-r-[1.5px] border-amber-400/30 absolute bottom-2.5 right-2.5 rounded-br-[1.5px]" />
           </div>
         </>
       )}

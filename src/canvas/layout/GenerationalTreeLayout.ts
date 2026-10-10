@@ -63,23 +63,23 @@ export class GenerationalTreeLayout {
       }
     }
 
-    // 2. Base Y per generation
-    const baseY = 240; // Deceased level 0 starts at Y=240
-    const nodeW = CANVAS_CONSTANTS.NODE_WIDTH;
-    const spouseGap = CANVAS_CONSTANTS.SPOUSE_SPACING;
-    const siblingGap = CANVAS_CONSTANTS.SIBLING_SPACING;
+    // 2. Base Y per generation (multiples of 15px grid)
+    const baseY = 240; // 15 * 16
+    const nodeW = CANVAS_CONSTANTS.NODE_WIDTH; // 210 (15 * 14)
+    const spouseGap = CANVAS_CONSTANTS.SPOUSE_SPACING; // 45 (15 * 3)
+    const siblingGap = CANVAS_CONSTANTS.SIBLING_SPACING; // 45 (15 * 3)
 
     // 3. Place Generation -1 (Parents)
     const parents = Array.from(allPersons.values()).filter(p => levels.get(p.id) === -1);
-    const parentY = baseY - CANVAS_CONSTANTS.GEN_LEVEL_HEIGHT;
-    let currentParentX = 300;
+    const parentY = baseY - CANVAS_CONSTANTS.GEN_LEVEL_HEIGHT; // 60 (15 * 4)
+    let currentParentX = 300; // 15 * 20
     for (const parent of parents) {
       layout.set(parent.id, { canvasX: currentParentX, canvasY: parentY });
       currentParentX += nodeW + siblingGap;
     }
 
     // 4. Place Generation 0 (Deceased and Spouse, plus Siblings)
-    const deceasedX = 340;
+    const deceasedX = 330; // 15 * 22
     layout.set(deceasedId, { canvasX: deceasedX, canvasY: baseY });
 
     // Deceased Spouse
@@ -90,7 +90,7 @@ export class GenerationalTreeLayout {
 
     if (deceasedSpouseEdge) {
       const spouseId = deceasedSpouseEdge.fromId === deceasedId ? deceasedSpouseEdge.toId : deceasedSpouseEdge.fromId;
-      const spouseX = deceasedX + nodeW + spouseGap;
+      const spouseX = deceasedX + nodeW + spouseGap; // 330 + 210 + 45 = 585 (15 * 39)
       layout.set(spouseId, { canvasX: spouseX, canvasY: baseY });
       rightBoundGen0 = spouseX + nodeW;
     }
@@ -108,16 +108,16 @@ export class GenerationalTreeLayout {
 
     // 5. Place Generation 1 (Children of deceased)
     const children = Array.from(allPersons.values()).filter(p => levels.get(p.id) === 1);
-    const childY = baseY + CANVAS_CONSTANTS.GEN_LEVEL_HEIGHT;
+    const childY = baseY + CANVAS_CONSTANTS.GEN_LEVEL_HEIGHT; // 420 (15 * 28)
 
     // Center children under the deceased/spouse union
     const unionCenterX = (deceasedX + rightBoundGen0) / 2;
     const totalChildrenWidth = children.length * nodeW + Math.max(0, children.length - 1) * siblingGap;
     let startChildX = unionCenterX - totalChildrenWidth / 2;
-    // Align with 5px grid
-    startChildX = Math.round(startChildX / 5) * 5;
+    // Align with 15px grid
+    startChildX = Math.round(startChildX / 15) * 15;
 
-    let curChildX = Math.max(80, startChildX);
+    let curChildX = Math.max(75, startChildX);
 
     for (const child of children) {
       // Check if child has a spouse
@@ -141,7 +141,7 @@ export class GenerationalTreeLayout {
     // 6. Place Generation 2 (Grandchildren)
     const grandChildren = Array.from(allPersons.values()).filter(p => levels.get(p.id) === 2);
     const grandChildY = childY + CANVAS_CONSTANTS.GEN_LEVEL_HEIGHT;
-    let curGcX = Math.max(80, startChildX);
+    let curGcX = Math.max(75, startChildX);
 
     for (const gc of grandChildren) {
       layout.set(gc.id, { canvasX: curGcX, canvasY: grandChildY });

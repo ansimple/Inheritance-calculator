@@ -8,6 +8,8 @@ import {
   RotateCcw, 
   RotateCw,
   CheckCircle,
+  Coins,
+  Scale
 } from 'lucide-react';
 import { useInheritanceStore } from './state/useInheritanceStore';
 import { WizardContainer } from './components/wizard/WizardContainer';
@@ -28,6 +30,8 @@ export default function App() {
     relationships,
     estate,
     calculationResult,
+    calculationMode,
+    setCalculationMode,
     canUndo,
     canRedo,
     undo,
@@ -70,6 +74,7 @@ export default function App() {
         relationships,
         estate,
         result: calculationResult,
+        calculationMode,
       });
 
       setIsExported(true);
@@ -91,20 +96,20 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-brown-950 text-stone-100 overflow-hidden font-sans print:h-auto print:overflow-visible print:bg-white print:text-black">
       {/* Top Navigation Bar */}
-      <header className="h-14 border-b border-brown-800 bg-brown-900/95 backdrop-blur px-3 sm:px-4 flex items-center justify-between z-20 shrink-0 no-print print:hidden">
+      <header className="h-14 border-b border-brown-800 bg-brown-900/95 backdrop-blur px-2.5 sm:px-4 flex items-center justify-between gap-2 z-20 shrink-0 no-print print:hidden">
         {/* Logo and Brand (Without '상' icon) */}
-        <div className="flex items-center min-w-0">
-          <h1 className="text-xs sm:text-sm font-semibold tracking-tight text-stone-100 flex items-center gap-2 truncate">
+        <div className="flex items-center min-w-0 shrink">
+          <h1 className="text-xs sm:text-sm font-semibold tracking-tight text-stone-100 flex items-center gap-1.5 sm:gap-2 truncate">
             <span className="font-bold tracking-normal text-amber-400 truncate">상속 계산기</span>
-            <span className="hidden sm:inline text-stone-300 font-normal">대한민국 상속 분배 및 유류분</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 font-mono font-medium shrink-0">
-              2026 전면 개정
+            <span className="hidden xl:inline text-stone-300 font-normal">대한민국 상속 분배 및 유류분</span>
+            <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 font-mono font-medium shrink-0">
+              2026 개정
             </span>
           </h1>
         </div>
 
-        {/* View Switching Tabs (Desktop: hidden on mobile) */}
-        <div className="hidden md:flex items-center bg-brown-950/90 p-1 rounded-xl border border-brown-800">
+        {/* View Switching Tabs (Desktop: hidden on mobile & tablets, shown on lg+) */}
+        <div className="hidden lg:flex items-center bg-brown-950/90 p-1 rounded-xl border border-brown-800 shrink-0">
           <button
             onClick={() => setActiveTab('wizard')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -140,9 +145,38 @@ export default function App() {
           </button>
         </div>
 
+        {/* Calculation Mode Toggle (Dual Mode Switcher) */}
+        <div className="flex items-center bg-brown-950 p-1 rounded-xl border border-brown-800 shrink-0">
+          <button
+            onClick={() => setCalculationMode('SHARE_ONLY')}
+            title="재산 가액 없이 법정 상속지분율 및 유류분 비율을 산출합니다"
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs transition-all ${
+              calculationMode === 'SHARE_ONLY'
+                ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
+                : 'text-stone-400 hover:text-stone-200 hover:bg-brown-900 font-medium'
+            }`}
+          >
+            <Scale className="w-3.5 h-3.5 shrink-0" />
+            <span>지분율</span>
+          </button>
+          <button
+            onClick={() => setCalculationMode('FULL')}
+            title="상속재산 및 채무, 특별수익, 기여분을 입력하여 최종 분배액(원)을 정산합니다"
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs transition-all ${
+              calculationMode === 'FULL'
+                ? 'bg-amber-600 text-white font-bold shadow-md shadow-amber-600/30'
+                : 'text-stone-400 hover:text-stone-200 hover:bg-brown-900 font-medium'
+            }`}
+          >
+            <Coins className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden xs:inline sm:inline">금액 </span>
+            <span>정산</span>
+          </button>
+        </div>
+
         {/* Actions (Undo/Redo & Export) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <div className="flex items-center border-r border-brown-800 pr-1.5 sm:pr-2 mr-0.5 sm:mr-1 gap-0.5 sm:gap-1">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <div className="flex items-center border-r border-brown-800 pr-1 sm:pr-2 mr-0.5 gap-0.5 sm:gap-1">
             <button 
               onClick={undo}
               disabled={!canUndo}
@@ -153,7 +187,7 @@ export default function App() {
                   : 'text-stone-600 cursor-not-allowed'
               }`}
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
             <button 
               onClick={redo}
@@ -165,14 +199,14 @@ export default function App() {
                   : 'text-stone-600 cursor-not-allowed'
               }`}
             >
-              <RotateCw className="w-4 h-4" />
+              <RotateCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
 
           <button 
             onClick={handleExportExcel}
             title="엑셀 다운로드 (.xlsx)"
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
               isExported
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
                 : 'bg-emerald-950/60 text-emerald-300 border border-emerald-700/50 hover:bg-emerald-900/60'
@@ -181,37 +215,37 @@ export default function App() {
             {isExported ? (
               <>
                 <CheckCircle className="w-3.5 h-3.5 pointer-events-none" />
-                <span className="hidden sm:inline">다운로드 완료!</span>
+                <span className="hidden sm:inline">완료</span>
               </>
             ) : (
               <>
                 <FileSpreadsheet className="w-3.5 h-3.5 pointer-events-none" />
                 <span className="hidden sm:inline">엑셀</span>
-                <span className="hidden md:inline">다운로드</span>
+                <span className="hidden xl:inline"> 다운로드</span>
               </>
             )}
           </button>
           <button 
             onClick={() => setIsPrintModalOpen(true)}
             title="보고서 인쇄 및 PDF 저장"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-brown-850 text-stone-200 hover:bg-brown-800 border border-brown-700/60 text-xs font-medium transition"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-brown-850 text-stone-200 hover:bg-brown-800 border border-brown-700/60 text-xs font-medium transition"
           >
             <Printer className="w-3.5 h-3.5 pointer-events-none" />
             <span className="hidden sm:inline">인쇄</span>
-            <span className="hidden md:inline">/ PDF</span>
+            <span className="hidden xl:inline">/PDF</span>
           </button>
         </div>
       </header>
 
       {/* Main Workspace Body */}
-      <main className="flex-1 relative overflow-hidden bg-brown-950 pb-16 md:pb-0 no-print print:hidden">
+      <main className="flex-1 relative overflow-hidden bg-brown-950 pb-16 lg:pb-0 no-print print:hidden">
         {activeTab === 'wizard' && <WizardContainer />}
         {activeTab === 'canvas' && <FamilyTreeCanvas />}
         {activeTab === 'visualizer' && <PipelineFlowGraph />}
       </main>
 
       {/* Mobile Bottom Navigation Bar (Visible only on mobile/tablet) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-brown-900/95 border-t border-brown-800 backdrop-blur-lg z-30 flex items-center justify-around px-2 shadow-2xl safe-area-pb no-print print:hidden">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-brown-900/95 border-t border-brown-800 backdrop-blur-lg z-30 flex items-center justify-around px-2 shadow-2xl safe-area-pb no-print print:hidden">
         <button
           onClick={() => setActiveTab('wizard')}
           className={`flex flex-col items-center justify-center flex-1 h-full py-1 gap-1 text-[11px] font-medium transition-colors ${

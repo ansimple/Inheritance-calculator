@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { PersonNode } from '../../domain/models/Person';
 import { CanvasViewport, CANVAS_CONSTANTS } from '../../canvas/core/CanvasViewport';
 
@@ -18,10 +18,52 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
   onPanChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
 
   const miniW = 180;
   const miniH = 100;
 
+  // Compute bounding box strictly based on all persons nodes (Outer Virtual Rect)
+  const getLayout = useCallback(() => {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    if (persons.size > 0) {
+      for (const p of persons.values()) {
+        minX = Math.min(minX, p.canvasX);
+        minY = Math.min(minY, p.canvasY);
+        maxX = Math.max(maxX, p.canvasX + CANVAS_CONSTANTS.NODE_WIDTH);
+        maxY = Math.max(maxY, p.canvasY + CANVAS_CONSTANTS.NODE_HEIGHT);
+      }
+    } else {
+      minX = 0;
+      minY = 0;
+      maxX = 800;
+      maxY = 600;
+    }
+
+    const boundsW = Math.max(CANVAS_CONSTANTS.NODE_WIDTH, maxX - minX);
+    const boundsH = Math.max(CANVAS_CONSTANTS.NODE_HEIGHT, maxY - minY);
+
+    // Margin padding inside minimap canvas (in minimap pixels)
+    const padding = 12;
+    const availW = Math.max(10, miniW - padding * 2);
+    const availH = Math.max(10, miniH - padding * 2);
+
+    // Uniform scale to fit the entire bounding box inside minimap
+    const scale = Math.min(availW / boundsW, availH / boundsH);
+
+    // Center the entire bounding box inside the minimap
+    const offsetX = (miniW - boundsW * scale) / 2;
+    const offsetY = (miniH - boundsH * scale) / 2;
+
+    return { minX, minY, boundsW, boundsH, scale, offsetX, offsetY };
+  }, [persons]);
+
+  // Render Minimap
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -30,117 +72,99 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
 
     ctx.clearRect(0, 0, miniW, miniH);
 
-    // Calculate world bounding box
-    let minX = 0;
-    let minY = 0;
-    let maxX = 800;
-    let maxY = 600;
+    const { minX, minY, scale, offsetX, offsetY } = getLayout();
 
-    if (persons.size > 0) {
-      minX = Infinity;
-      minY = Infinity;
-      maxX = -Infinity;
-      maxY = -Infinity;
-      for (const p of persons.values()) {
-        minX = Math.min(minX, p.canvasX);
-        minY = Math.min(minY, p.canvasY);
-        maxX = Math.max(maxX, p.canvasX + CANVAS_CONSTANTS.NODE_WIDTH);
-        maxY = Math.max(maxY, p.canvasY + CANVAS_CONSTANTS.NODE_HEIGHT);
-      }
-    }
-
-    // Add margin
-    const margin = 80;
-    minX -= margin;
-    minY -= margin;
-    maxX += margin;
-    maxY += margin;
-
-    const worldW = maxX - minX;
-    const worldH = maxY - minY;
-
-    const scale = Math.min(miniW / worldW, miniH / worldH);
-
-    // Render nodes
+    // Render all person nodes centered in minimap (Soft toned-down white)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
     for (const p of persons.values()) {
-      const mx = (p.canvasX - minX) * scale;
-      const my = (p.canvasY - minY) * scale;
-      const mw = CANVAS_CONSTANTS.NODE_WIDTH * scale;
-      const mh = CANVAS_CONSTANTS.NODE_HEIGHT * scale;
+      const mx = offsetX + (p.canvasX - minX) * scale;
+      const my = offsetY + (p.canvasY - minY) * scale;
+      const mw = Math.max(CANVAS_CONSTANTS.NODE_WIDTH * scale, 5);
+      const mh = Math.max(CANVAS_CONSTANTS.NODE_HEIGHT * scale, 3);
 
-      ctx.fillStyle = '#d97706';
-      ctx.fillRect(mx, my, Math.max(mw, 4), Math.max(mh, 3));
+      ctx.fillRect(mx, my, mw, mh);
     }
+  }, [getLayout, miniW, miniH, persons]);
 
-    // Render Viewport Radar Box
-    const viewWorldMin = viewport.screenToWorld(0, 0);
-    const viewWorldMax = viewport.screenToWorld(canvasWidth, canvasHeight);
+  // Handle pan from minimap mouse coordinate
+  const panToMinimapCoord = useCallback(
+    (clientX: number, clientY: number) => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
 
-    const rX = (viewWorldMin.x - minX) * scale;
-    const rY = (viewWorldMin.y - minY) * scale;
-    const rW = (viewWorldMax.x - viewWorldMin.x) * scale;
-    const rH = (viewWorldMax.y - viewWorldMin.y) * scale;
+      const clickX = clientX - rect.left;
+      const clickY = clientY - rect.top;
 
-    ctx.strokeStyle = '#f59e0b'; // Amber Gold
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(rX, rY, rW, rH);
-    ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
-    ctx.fillRect(rX, rY, rW, rH);
-  }, [persons, viewport, canvasWidth, canvasHeight]);
+      const { minX, minY, scale, offsetX, offsetY } = getLayout();
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+      const targetWorldX = minX + (clickX - offsetX) / scale;
+      const targetWorldY = minY + (clickY - offsetY) / scale;
 
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+      const newPanX = canvasWidth / (2 * viewport.zoom) - targetWorldX;
+      const newPanY = canvasHeight / (2 * viewport.zoom) - targetWorldY;
 
-    let minX = 0;
-    let minY = 0;
-    let maxX = 800;
-    let maxY = 600;
+      onPanChange(newPanX, newPanY);
+    },
+    [canvasHeight, canvasWidth, getLayout, onPanChange, viewport.zoom]
+  );
 
-    if (persons.size > 0) {
-      minX = Infinity;
-      minY = Infinity;
-      maxX = -Infinity;
-      maxY = -Infinity;
-      for (const p of persons.values()) {
-        minX = Math.min(minX, p.canvasX);
-        minY = Math.min(minY, p.canvasY);
-        maxX = Math.max(maxX, p.canvasX + CANVAS_CONSTANTS.NODE_WIDTH);
-        maxY = Math.max(maxY, p.canvasY + CANVAS_CONSTANTS.NODE_HEIGHT);
-      }
+  // Mouse Drag handlers
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    panToMinimapCoord(e.clientX, e.clientY);
+
+    const handleMouseMove = (moveEv: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      panToMinimapCoord(moveEv.clientX, moveEv.clientY);
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // Touch Drag handlers
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      isDraggingRef.current = true;
+      setIsDragging(true);
+      panToMinimapCoord(e.touches[0].clientX, e.touches[0].clientY);
     }
+  };
 
-    const margin = 80;
-    minX -= margin;
-    minY -= margin;
-    maxX += margin;
-    maxY += margin;
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (isDraggingRef.current && e.touches.length === 1) {
+      panToMinimapCoord(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
 
-    const worldW = maxX - minX;
-    const worldH = maxY - minY;
-    const scale = Math.min(miniW / worldW, miniH / worldH);
-
-    const targetWorldX = minX + clickX / scale;
-    const targetWorldY = minY + clickY / scale;
-
-    const newPanX = canvasWidth / (2 * viewport.zoom) - targetWorldX;
-    const newPanY = canvasHeight / (2 * viewport.zoom) - targetWorldY;
-
-    onPanChange(newPanX, newPanY);
+  const handleTouchEnd = () => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
   };
 
   return (
-    <div className="hidden sm:block absolute bottom-4 left-4 z-10 bg-brown-900/90 backdrop-blur border border-brown-800 rounded-xl p-2 shadow-2xl">
+    <div className="hidden sm:block absolute bottom-4 left-4 z-10 bg-brown-900/90 backdrop-blur border border-brown-800 rounded-xl p-2 shadow-2xl select-none">
       <div className="text-[10px] text-stone-400 font-medium mb-1 px-1">미니맵</div>
       <canvas
         ref={canvasRef}
         width={miniW}
         height={miniH}
-        onClick={handleCanvasClick}
-        className="rounded bg-brown-950 border border-brown-800/80 cursor-crosshair"
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className={`rounded bg-brown-950 border border-brown-800/80 ${
+          isDragging ? 'cursor-grabbing' : 'cursor-crosshair'
+        }`}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 import { PersonNode, RelationshipEdge } from '../../domain/models/Person';
 import { HeirCalculationResult } from '../../domain/models/PipelineResult';
 import { CanvasViewport, CANVAS_CONSTANTS } from '../core/CanvasViewport';
-import { OrthogonalRouter } from '../core/OrthogonalRouter';
+import { OrthogonalRouter, Point2D } from '../core/OrthogonalRouter';
+import { CalculationMode } from '../../state/useInheritanceStore';
 
 export interface RenderOptions {
   deceasedId: string;
@@ -10,6 +11,7 @@ export interface RenderOptions {
   heirResults?: Map<string, HeirCalculationResult>;
   selectedPersonId?: string | null;
   hoveredPersonId?: string | null;
+  calculationMode?: CalculationMode;
   activeGuidelines?: {
     horizontalY?: number;
     verticalX?: number;
@@ -57,17 +59,18 @@ export class CanvasTreeRenderer {
     ctx.fillStyle = '#0f0c0a'; // Deep espresso dark background
     ctx.fillRect(0, 0, width, height);
 
-    const gridSize = 30 * viewport.zoom;
-    if (gridSize < 8) return; // Don't draw if too small
+    const gridSize = 15 * viewport.zoom;
+    if (gridSize < 6) return; // Don't draw if too small
 
-    const startX = (viewport.panX * viewport.zoom) % gridSize;
-    const startY = (viewport.panY * viewport.zoom) % gridSize;
+    const startX = ((viewport.panX * viewport.zoom) % gridSize + gridSize) % gridSize;
+    const startY = ((viewport.panY * viewport.zoom) % gridSize + gridSize) % gridSize;
 
-    ctx.fillStyle = 'rgba(217, 180, 140, 0.12)'; // Warm bronze dot grid
+    // 10% softer opacity (0.12 -> 0.108) and refined 1.0px dot radius for 15px spacing
+    ctx.fillStyle = 'rgba(217, 180, 140, 0.105)'; // Warm bronze dot grid
     for (let x = startX; x < width; x += gridSize) {
       for (let y = startY; y < height; y += gridSize) {
         ctx.beginPath();
-        ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+        ctx.arc(x, y, 1.0, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -83,22 +86,71 @@ export class CanvasTreeRenderer {
     ctx.setLineDash([4, 4]);
 
     if (guidelines.horizontalY !== undefined) {
+      const y = CanvasViewport.snapToGrid(guidelines.horizontalY, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
       ctx.strokeStyle = '#06b6d4'; // Cyan
       ctx.beginPath();
-      ctx.moveTo(-5000, guidelines.horizontalY);
-      ctx.lineTo(5000, guidelines.horizontalY);
+      ctx.moveTo(-5000, y);
+      ctx.lineTo(5000, y);
       ctx.stroke();
     }
 
     if (guidelines.verticalX !== undefined) {
+      const x = CanvasViewport.snapToGrid(guidelines.verticalX, CANVAS_CONSTANTS.MAGNET_GRID_STEP);
       ctx.strokeStyle = '#a855f7'; // Purple
       ctx.beginPath();
-      ctx.moveTo(guidelines.verticalX, -5000);
-      ctx.lineTo(guidelines.verticalX, 5000);
+      ctx.moveTo(x, -5000);
+      ctx.lineTo(x, 5000);
       ctx.stroke();
     }
 
     ctx.setLineDash([]);
+  }
+
+  /**
+   * Generates a parallel offset path for an orthogonal polyline.
+   */
+  private static computeOrthogonalOffsetPath(points: Point2D[], offset: number): Point2D[] {
+    if (points.length < 2) return points;
+
+    // Compute unit normal vectors for each segment
+    const normals: { nx: number; ny: number }[] = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const dx = points[i + 1].x - points[i].x;
+      const dy = points[i + 1].y - points[i].y;
+      const len = Math.hypot(dx, dy);
+      if (len === 0) {
+        normals.push({ nx: 0, ny: 0 });
+      } else {
+        normals.push({ nx: -dy / len, ny: dx / len });
+      }
+    }
+
+    const offsetPoints: Point2D[] = [];
+
+    for (let i = 0; i < points.length; i++) {
+      if (i === 0) {
+        const n = normals[0];
+        offsetPoints.push({
+          x: points[0].x + n.nx * offset,
+          y: points[0].y + n.ny * offset,
+        });
+      } else if (i === points.length - 1) {
+        const n = normals[normals.length - 1];
+        offsetPoints.push({
+          x: points[i].x + n.nx * offset,
+          y: points[i].y + n.ny * offset,
+        });
+      } else {
+        const n1 = normals[i - 1];
+        const n2 = normals[i];
+        offsetPoints.push({
+          x: points[i].x + (n1.nx + n2.nx) * offset,
+          y: points[i].y + (n1.ny + n2.ny) * offset,
+        });
+      }
+    }
+
+    return offsetPoints;
   }
 
   private static renderEdges(ctx: CanvasRenderingContext2D, options: RenderOptions) {
@@ -116,22 +168,37 @@ export class CanvasTreeRenderer {
         ctx.lineWidth = 2;
       }
 
-      // Parallel double line
+      ctx.lineJoin = 'miter';
+
+      // Draw two parallel orthogonal lines
+      const pts = sp.points && sp.points.length >= 2 ? sp.points : [sp.start, sp.end];
       const offset = 2.5;
+      const pathA = this.computeOrthogonalOffsetPath(pts, -offset);
+      const pathB = this.computeOrthogonalOffsetPath(pts, offset);
+
+      // Path A
       ctx.beginPath();
-      ctx.moveTo(sp.start.x, sp.start.y - offset);
-      ctx.lineTo(sp.end.x, sp.end.y - offset);
-      ctx.moveTo(sp.start.x, sp.start.y + offset);
-      ctx.lineTo(sp.end.x, sp.end.y + offset);
+      ctx.moveTo(pathA[0].x, pathA[0].y);
+      for (let i = 1; i < pathA.length; i++) {
+        ctx.lineTo(pathA[i].x, pathA[i].y);
+      }
       ctx.stroke();
 
-      // Middle badge
+      // Path B
+      ctx.beginPath();
+      ctx.moveTo(pathB[0].x, pathB[0].y);
+      for (let i = 1; i < pathB.length; i++) {
+        ctx.lineTo(pathB[i].x, pathB[i].y);
+      }
+      ctx.stroke();
+
+      // Middle badge placed at exact midpoint of the line length
       ctx.setLineDash([]);
       ctx.fillStyle = '#261b16';
       ctx.strokeStyle = sp.isDivorced ? '#78716c' : '#e11d48';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(sp.center.x, sp.center.y, 10, 0, Math.PI * 2);
+      ctx.arc(sp.center.x, sp.center.y, 13, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -239,37 +306,44 @@ export class CanvasTreeRenderer {
         }
       }
 
-      // Selection glow
+      // Selection / Hover glow
       if (isSelected) {
-        ctx.shadowColor = '#f59e0b'; // Amber gold glow
-        ctx.shadowBlur = 14;
+        ctx.shadowColor = statusBadgeColor || borderColor; // Match glow color to node's border tone
+        ctx.shadowBlur = 6; // Crisp, subtle glow without excessive spread
       } else if (isHovered) {
         ctx.shadowColor = 'rgba(217, 180, 140, 0.25)';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 4;
       }
 
-      // Card Background (Rounded Rectangle)
+      // 1. Outer Frame (Base rounded rectangle creating the roof & border seamlessly)
       ctx.beginPath();
       this.roundedRect(ctx, x, y, nodeW, nodeH, radius);
-      ctx.fillStyle = '#1e1814'; // Dark Mahogany / Warm Walnut
+      ctx.fillStyle = borderColor;
       ctx.fill();
 
-      // Card Border
-      ctx.lineWidth = isSelected ? 2.5 : 1.5;
-      ctx.strokeStyle = isSelected ? '#f59e0b' : borderColor;
-      ctx.stroke();
+      if (isSelected) {
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = statusBadgeColor || borderColor;
+        ctx.stroke();
+      }
 
-      // Reset shadow
+      // Reset shadow immediately so inner content is sharp
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
 
-      // Top Status Bar (3px colored line)
-      ctx.save();
+      // 2. Inner Content Card (Rounded rectangle with top margin for roof, pure dark background)
+      const roofMargin = 5; // Top colored roof thickness
+      const borderMargin = 1.5; // Left, right, bottom border thickness
+      const innerX = x + borderMargin;
+      const innerY = y + roofMargin;
+      const innerW = nodeW - borderMargin * 2;
+      const innerH = nodeH - roofMargin - borderMargin;
+      const innerRadius: [number, number, number, number] = [5, 5, 6.5, 6.5]; // Rounded on all 4 corners
+
       ctx.beginPath();
-      this.roundedRect(ctx, x + 1, y + 1, nodeW - 2, 4, [radius, radius, 0, 0]);
-      ctx.fillStyle = borderColor;
+      this.roundedRect(ctx, innerX, innerY, innerW, innerH, innerRadius);
+      ctx.fillStyle = '#1e1814'; // Pure Dark Mahogany / Warm Walnut
       ctx.fill();
-      ctx.restore();
 
       // Gender & Name
       const genderSymbol = person.gender === 'MALE' ? '♂' : '♀';
@@ -293,6 +367,7 @@ export class CanvasTreeRenderer {
         const badgeY = y + 12;
 
         ctx.fillStyle = statusBadgeBg;
+        ctx.beginPath(); // Ensure isolated path so badge bg doesn't bleed into card background
         this.roundedRect(ctx, badgeX, badgeY, badgeW, 18, 4);
         ctx.fill();
 
@@ -314,7 +389,34 @@ export class CanvasTreeRenderer {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
 
-      if (heirResult && heirResult.finalConcreteShareWon > 0n) {
+      if (options.calculationMode === 'SHARE_ONLY') {
+        if (isDeceasedPerson) {
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillText('피상속인 (상속개시)', x + 12, y + 44);
+          ctx.font = '10px sans-serif';
+          ctx.fillStyle = '#a8a29e';
+          ctx.fillText('법정 지분 기준점', x + 12, y + 62);
+        } else if (heirResult && heirResult.statutoryShareRate) {
+          const sharePct = (heirResult.statutoryShareRate.toNumber() * 100).toFixed(1);
+          const reserveFraction = heirResult.statutoryShareRate.multiply(1n, 2n);
+          const reservePct = (reserveFraction.toNumber() * 100).toFixed(1);
+
+          // Statutory Share Rate (Bold Emerald)
+          ctx.font = 'bold 11px sans-serif';
+          ctx.fillStyle = '#34d399'; // Emerald-400
+          ctx.fillText(`법정 지분: ${heirResult.statutoryShareRate.toFractionString()} (${sharePct}%)`, x + 12, y + 44);
+
+          // Reserved Share Rate (Amber)
+          ctx.font = '10px sans-serif';
+          ctx.fillStyle = '#fbbf24'; // Amber-400
+          ctx.fillText(`유류분율: ${reserveFraction.toFractionString()} (${reservePct}%)`, x + 12, y + 62);
+        } else {
+          ctx.font = '10px sans-serif';
+          ctx.fillStyle = '#78716c';
+          ctx.fillText('비상속인 (상속 지분 없음)', x + 12, y + 52);
+        }
+      } else if (heirResult && heirResult.finalConcreteShareWon > 0n) {
         // Legal Share Rate
         ctx.font = '10px sans-serif';
         ctx.fillStyle = '#a8a29e';
